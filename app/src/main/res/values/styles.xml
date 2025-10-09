@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="PopupNotificationTheme" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:windowAnimationStyle">@style/PopupNotificationAnimation</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
+    <style name="PopupNotificationAnimation">
+        <item name="android:windowEnterAnimation">@anim/popup_slide_in_down</item>
+        <item name="android:windowExitAnimation">@anim/popup_slide_out_up</item>
+    </style>
+
+</resources>

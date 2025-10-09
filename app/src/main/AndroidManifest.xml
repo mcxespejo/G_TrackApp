@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.g_trackapp">
+
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+
+
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.GTrackResidentApp">
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key" />
+
+        <!-- Main launcher -->
+        <activity
+            android:name="com.example.g_trackapp.WelcomeActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Other activities -->
+        <activity android:name="com.example.g_trackapp.ResidentLoginActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentRegisterActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentLandingPageActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentMainMenuActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentLocateNowActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentScheduleActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentFeedbackActivity" />
+        <activity android:name="com.example.g_trackapp.ResidentAccountSettingActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorLoginActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorLandingPageActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorMainMenuActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorLevelsOfGarbageActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorRouteSuggestionActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorFeedbackActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorAccountSettingActivity" />
+        <activity android:name="com.example.g_trackapp.CollectorScheduleActivity" />
+        <activity android:name=".FullScreenImageActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar"/>
+        <activity
+            android:name=".ResidentNotificationListActivity"
+            android:theme="@style/PopupNotificationTheme"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true" />
+
+
+
+
+    </application>
+
+</manifest>

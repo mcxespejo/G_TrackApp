@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "172056621672",
+    "firebase_url": "https://g-trackapp-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "g-trackapp",
+    "storage_bucket": "g-trackapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172056621672:android:8f05ad41f12058497d01dd",
+        "android_client_info": {
+          "package_name": "com.example.g_trackapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEUmV7WPz1Jq3sXcyE-7efPm_DBtzeDTo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

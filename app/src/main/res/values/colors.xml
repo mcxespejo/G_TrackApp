@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Define colors used throughout the app, matching the green theme -->
+    <color name="green_button">#4CAF50</color>
+    <color name="light_green_background">#E8F5E9</color>
+    <color name="dark_green_text">#1B5E20</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <!-- Primary and Secondary Colors -->
+    <color name="primaryColor">#4CAF50</color>
+    <color name="primaryDarkColor">#1B5E20</color>
+    <color name="onPrimaryColor">#FFFFFF</color>
+
+    <!-- Background and Text Colors -->
+    <color name="backgroundColor">#E8F5E9</color>
+    <color name="onBackgroundColor">#212121</color>
+
+</resources>

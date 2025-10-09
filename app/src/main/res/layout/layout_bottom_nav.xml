@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bottom_nav_bar"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    android:orientation="horizontal"
+    android:background="#E1F7D5"
+    android:gravity="center_vertical">
+
+    <!-- Back Button (Left) -->
+    <ImageView
+        android:id="@+id/btnBack"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:src="@drawable/ic_back"
+        android:contentDescription="Back"
+        android:padding="12dp" />
+
+    <!-- Home Icon (Center) -->
+    <ImageView
+        android:id="@+id/btnHome"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:src="@drawable/ic_home"
+        android:contentDescription="Home"
+        android:padding="12dp" />
+
+    <!-- Alarm Icon (Right) -->
+    <ImageView
+        android:id="@+id/btnAlarm"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:src="@drawable/ic_alarm"
+        android:contentDescription="Alarm"
+        android:padding="12dp" />
+</LinearLayout>

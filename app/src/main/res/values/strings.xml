@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">G-Track Resident App</string>
+    <string name="welcome_to_g_track">Welcome to G-Track</string>
+    <string name="log_in_as_resident">Log In As Resident</string>
+    <string name="log_in_as_collector">Log In As Collector</string>
+    <string name="don_t_have_an_account">Don\'t have an account? Sign up</string>
+    <string name="or">or</string>
+    <string name="sign_in_using">Sign in using</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="log_in">Log In</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="name">Name</string>
+    <string name="address">Address</string>
+    <string name="contact_number">Contact Number</string>
+    <string name="email_address">Email Address</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="locate_now">Locate Now</string>
+    <string name="schedule">Schedule</string>
+    <string name="feedback">Feedback</string>
+    <string name="your_location">Your Location</string>
+    <string name="drop_off_location">Drop Off Location</string>
+    <string name="main_menu_resident">Main Menu (Resident)</string>
+    <string name="view_schedule">View Schedule</string>
+    <string name="track_location">Track Location</string>
+    <string name="report_garbage">Report Garbage</string>
+    <string name="set_alarm">Set Alarm</string>
+    <string name="send_feedback">Send Feedback</string>
+    <string name="logout">Logout</string>
+    <string name="home_icon">Home Icon</string>
+    <string name="g_track">G-Track</string>
+    <string name="select_province" />
+    <string name="select_city" />
+    <string name="select_barangay" />
+</resources>
