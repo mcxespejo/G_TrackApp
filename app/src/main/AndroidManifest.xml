@@ -2,16 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.g_trackapp">
 
-    <!-- Permissions -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- 🔹 Core Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- 🔹 Alarm and Foreground Services -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- 🔹 Restart on Boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -21,12 +25,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GTrackResidentApp">
 
-        <!-- Google Maps API Key -->
+        <!-- 🔹 Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
 
-        <!-- Main launcher -->
+        <!-- 🔹 Main Launcher Activity -->
         <activity
             android:name="com.example.g_trackapp.WelcomeActivity"
             android:exported="true">
@@ -36,33 +40,65 @@
             </intent-filter>
         </activity>
 
-        <!-- Other activities -->
-        <activity android:name="com.example.g_trackapp.ResidentLoginActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentRegisterActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentLandingPageActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentMainMenuActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentLocateNowActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentScheduleActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentFeedbackActivity" />
-        <activity android:name="com.example.g_trackapp.ResidentAccountSettingActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorLoginActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorLandingPageActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorMainMenuActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorLevelsOfGarbageActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorRouteSuggestionActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorFeedbackActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorAccountSettingActivity" />
-        <activity android:name="com.example.g_trackapp.CollectorScheduleActivity" />
-        <activity android:name=".FullScreenImageActivity"
-            android:theme="@style/Theme.AppCompat.NoActionBar"/>
+        <!-- 🔹 Firebase Cloud Messaging Service -->
+        <service
+            android:name=".MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- 🔹 Boot Receiver (restart services after reboot) -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 🔹 Alarm Receiver (for scheduled notifications) -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false" />
+
+        <!-- 🔹 Foreground Location Tracking Service -->
+        <service
+            android:name=".CollectorLocationService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- 🔹 Activities -->
+        <activity android:name=".ResidentLoginActivity" />
+        <activity android:name=".ResidentRegisterActivity" />
+        <activity android:name=".ResidentLandingPageActivity" />
+        <activity android:name=".ResidentMainMenuActivity" />
+        <activity android:name=".ResidentLocateNowActivity" />
+        <activity android:name=".ResidentScheduleActivity" />
+        <activity android:name=".ResidentFeedbackActivity" />
+        <activity android:name=".ResidentAccountSettingActivity" />
+        <activity android:name=".CollectorLoginActivity" />
+        <activity android:name=".CollectorLandingPageActivity" />
+        <activity android:name=".CollectorMainMenuActivity" />
+        <activity android:name=".CollectorLevelsOfGarbageActivity" />
+        <activity android:name=".CollectorRouteSuggestionActivity" />
+        <activity android:name=".CollectorFeedbackActivity" />
+        <activity android:name=".CollectorAccountSettingActivity" />
+        <activity android:name=".CollectorScheduleActivity" />
+
+        <!-- 🔹 Image Viewer (Fullscreen) -->
+        <activity
+            android:name=".FullScreenImageActivity"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
+        <!-- 🔹 Popup Notification Activity -->
         <activity
             android:name=".ResidentNotificationListActivity"
             android:theme="@style/PopupNotificationTheme"
             android:launchMode="singleTop"
             android:excludeFromRecents="true" />
-
-
-
 
     </application>
 

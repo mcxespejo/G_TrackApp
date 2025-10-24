@@ -4,8 +4,11 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -27,6 +30,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +44,6 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
     private TextView txtBadgeCount;
     private ImageView btnMenu, btnNotification, btnAlarm;
 
-    // Popup components
     private FrameLayout popupRoot;
     private LinearLayout popupContainer;
     private RecyclerView recyclerNotifications;
@@ -59,47 +62,36 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
         txtBadgeCount = findViewById(R.id.txtBadgeCount);
         btnNotification = findViewById(R.id.btnNotification);
         btnMenu = findViewById(R.id.btnMenu);
-        btnAlarm = findViewById(R.id.btnAlarm); // Alarm button
+        btnAlarm = findViewById(R.id.btnAlarm);
 
-        // Navigation buttons
+        // 🔹 Navigation buttons
         findViewById(R.id.btnLocateNow).setOnClickListener(v ->
-                startActivity(new Intent(this, ResidentLocateNowActivity.class))
-        );
+                startActivity(new Intent(this, ResidentLocateNowActivity.class)));
         findViewById(R.id.btnSchedule).setOnClickListener(v ->
-                startActivity(new Intent(this, ResidentScheduleActivity.class))
-        );
+                startActivity(new Intent(this, ResidentScheduleActivity.class)));
         findViewById(R.id.btnFeedback).setOnClickListener(v ->
-                startActivity(new Intent(this, ResidentFeedbackActivity.class))
-        );
+                startActivity(new Intent(this, ResidentFeedbackActivity.class)));
         findViewById(R.id.btnHome).setOnClickListener(v -> {
             Intent intent = new Intent(this, ResidentMainMenuActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(intent);
         });
 
-        // Notification button
+        // 🔹 Notifications popup
         btnNotification.setOnClickListener(v -> {
             if (!popupVisible) showNotificationPopup();
         });
 
-        // Alarm button
-        btnAlarm.setOnClickListener(v -> {
-            scheduleAlarm("G-Track Reminder", "Check your schedule or notifications!", 5);
-            Toast.makeText(this, "Alarm set for 5 seconds later", Toast.LENGTH_SHORT).show();
-        });
+        // 🔹 Custom alarm button
+        btnAlarm.setOnClickListener(v -> showTimePickerDialog());
 
-        // Top-right menu
-        if (btnMenu != null) {
-            btnMenu.setOnClickListener(v -> showPopupMenu(btnMenu));
-        }
+        // 🔹 Menu
+        btnMenu.setOnClickListener(v -> showPopupMenu(btnMenu));
 
-        // Listen for notifications
         listenToNotifications();
     }
 
-    /**
-     * 🔥 Real-time Firestore notification listener (filtered by username)
-     */
+    // 🔔 Listen for Firestore notifications
     private void listenToNotifications() {
         String username = sessionManager.getUsername();
         if (username == null) return;
@@ -125,9 +117,7 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * 📩 Show notification popup with slide-down animation
-     */
+    // 📩 Show popup notifications
     private void showNotificationPopup() {
         if (popupVisible) return;
 
@@ -136,11 +126,6 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
 
         popupContainer = popupRoot.findViewById(R.id.notificationContainer);
         recyclerNotifications = popupRoot.findViewById(R.id.recyclerNotifications);
-
-        if (popupContainer == null || recyclerNotifications == null) {
-            Toast.makeText(this, "Popup layout missing required views.", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
         recyclerNotifications.setLayoutManager(new LinearLayoutManager(this));
         adapter = new NotificationAdapter(notificationList);
@@ -152,26 +137,18 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
         FrameLayout rootLayout = findViewById(android.R.id.content);
         rootLayout.addView(popupRoot);
 
-        popupRoot.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(300)
-                .start();
-
+        popupRoot.animate().alpha(1f).translationY(0f).setDuration(300).start();
         popupVisible = true;
 
         popupRoot.setOnClickListener(v -> hideNotificationPopup());
-        popupContainer.setOnClickListener(v -> {}); // Prevent dismissal when tapping inside
+        popupContainer.setOnClickListener(v -> {});
 
         loadNotifications();
     }
 
-    /**
-     * ❌ Hide notification popup with slide-up animation
-     */
+    // ❌ Hide popup
     private void hideNotificationPopup() {
         if (!popupVisible || popupRoot == null) return;
-
         popupVisible = false;
 
         popupRoot.animate()
@@ -180,17 +157,13 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
                 .setDuration(300)
                 .withEndAction(() -> {
                     FrameLayout rootLayout = findViewById(android.R.id.content);
-                    if (popupRoot.getParent() != null) {
-                        rootLayout.removeView(popupRoot);
-                    }
+                    rootLayout.removeView(popupRoot);
                     popupRoot = null;
                 })
                 .start();
     }
 
-    /**
-     * 🧹 Load notifications from Firestore
-     */
+    // 🧹 Load notifications
     private void loadNotifications() {
         String username = sessionManager.getUsername();
         if (username == null) return;
@@ -202,9 +175,7 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
                 .addOnSuccessListener(snapshots -> {
                     notificationList.clear();
                     for (var doc : snapshots.getDocuments()) {
-                        String title = doc.getString("title");
                         String message = doc.getString("message");
-                        boolean isRead = Boolean.TRUE.equals(doc.getBoolean("isRead"));
                         Timestamp timestamp = doc.getTimestamp("timestamp");
                         notificationList.add(new NotificationModel(message, username, false, timestamp));
                     }
@@ -214,23 +185,7 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
                         Toast.makeText(this, "Failed to load notifications", Toast.LENGTH_SHORT).show());
     }
 
-    private void dismissPopup() {
-        if (!popupVisible) return;
-        popupVisible = false;
-
-        popupRoot.animate()
-                .alpha(0f)
-                .translationY(-popupRoot.getHeight())
-                .setDuration(300)
-                .setListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        ((FrameLayout) popupRoot.getParent()).removeView(popupRoot);
-                    }
-                })
-                .start();
-    }
-
+    // ⚙️ Menu options
     private void showPopupMenu(ImageView anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
         popup.getMenuInflater().inflate(R.menu.menu_top_right, popup.getMenu());
@@ -261,25 +216,46 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
         return false;
     }
 
-    @Override
-    public void onBackPressed() {
-        if (popupVisible) {
-            dismissPopup();
-        } else {
-            super.onBackPressed();
-        }
+
+    // ============================================
+    // 🕒 CUSTOM ALARM FEATURE
+    // ============================================
+
+    private void showTimePickerDialog() {
+        Calendar now = Calendar.getInstance();
+
+        TimePickerDialog timePicker = new TimePickerDialog(
+                this,
+                (view, hourOfDay, minute) -> {
+                    Calendar alarmTime = Calendar.getInstance();
+                    alarmTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                    alarmTime.set(Calendar.MINUTE, minute);
+                    alarmTime.set(Calendar.SECOND, 0);
+                    alarmTime.set(Calendar.MILLISECOND, 0);
+
+                    if (alarmTime.before(Calendar.getInstance())) {
+                        alarmTime.add(Calendar.DATE, 1);
+                    }
+
+                    scheduleAlarmAt(
+                            "G-Track Reminder",
+                            "It's time to check your collection schedule!",
+                            alarmTime
+                    );
+
+                    Toast.makeText(this,
+                            "Alarm set for " + String.format("%02d:%02d", hourOfDay, minute),
+                            Toast.LENGTH_SHORT).show();
+                },
+                now.get(Calendar.HOUR_OF_DAY),
+                now.get(Calendar.MINUTE),
+                true
+        );
+
+        timePicker.show();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (notificationListener != null) notificationListener.remove();
-    }
-
-    /**
-     * 🔔 Schedule a local alarm/notification
-     */
-    private void scheduleAlarm(String title, String message, int delayInSeconds) {
+    private void scheduleAlarmAt(String title, String message, Calendar alarmTime) {
         Intent intent = new Intent(this, AlarmReceiver.class);
         intent.putExtra("title", title);
         intent.putExtra("message", message);
@@ -292,7 +268,39 @@ public class ResidentMainMenuActivity extends AppCompatActivity {
         );
 
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-        long triggerAt = System.currentTimeMillis() + (delayInSeconds * 1000);
-        alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
+
+        if (alarmManager != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            alarmTime.getTimeInMillis(),
+                            pendingIntent
+                    );
+                } else {
+                    Intent intentPermission = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    startActivity(intentPermission);
+                    Toast.makeText(this, "Please grant exact alarm permission.", Toast.LENGTH_LONG).show();
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        alarmTime.getTimeInMillis(),
+                        pendingIntent
+                );
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (notificationListener != null) notificationListener.remove();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (popupVisible) hideNotificationPopup();
+        else super.onBackPressed();
     }
 }

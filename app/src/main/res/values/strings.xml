@@ -34,4 +34,7 @@
     <string name="select_province" />
     <string name="select_city" />
     <string name="select_barangay" />
+    <string name="facebook_app_id">YOUR_FACEBOOK_APP_ID_HERE</string>
+    <string name="fb_login_protocol_scheme">fbYOUR_FACEBOOK_APP_ID_HERE</string>
+
 </resources>

@@ -9,6 +9,10 @@ import android.widget.*;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class ResidentLoginActivity extends AppCompatActivity {
 
@@ -34,10 +38,7 @@ public class ResidentLoginActivity extends AppCompatActivity {
         // 🔹 Auto-login if already logged in
         if (sessionManager.isLoggedIn()) {
             Log.d(TAG, "Auto-login for resident: " + sessionManager.getUsername());
-
-            Intent intent = new Intent(this, ResidentLandingPageActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
+            goToResidentLandingPage();
             return;
         }
 
@@ -60,13 +61,13 @@ public class ResidentLoginActivity extends AppCompatActivity {
                     .addOnSuccessListener(querySnapshot -> {
                         if (!querySnapshot.isEmpty()) {
                             DocumentSnapshot document = querySnapshot.getDocuments().get(0);
-
                             String storedPassword = document.getString("password");
+
                             if (storedPassword != null && storedPassword.equals(password)) {
                                 Log.d(TAG, "Login successful for resident: " + username);
                                 Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
 
-                                // ✅ Fetch fields (try both firstname/lastname and firstName/lastName)
+                                // ✅ Fetch fields (supporting multiple naming conventions)
                                 String firstName = document.getString("firstname");
                                 if (firstName == null) firstName = document.getString("firstName");
 
@@ -88,15 +89,15 @@ public class ResidentLoginActivity extends AppCompatActivity {
                                         email != null ? email : "",
                                         contact != null ? contact : ""
                                 );
-
                                 sessionManager.saveExtraResidentInfo(region, city, barangay);
 
-                                Log.d(TAG, "Saved resident: " + firstName + " " + lastName);
+                                Log.d(TAG, "Saved resident session for: " + firstName + " " + lastName);
 
-                                // 🚀 Redirect
-                                Intent intent = new Intent(ResidentLoginActivity.this, ResidentLandingPageActivity.class);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
+                                // 🔹 Save or refresh FCM Token
+                                updateFcmToken(document.getId());
+
+                                // 🚀 Redirect to landing page
+                                goToResidentLandingPage();
 
                             } else {
                                 Log.w(TAG, "Wrong password for resident: " + username);
@@ -116,7 +117,7 @@ public class ResidentLoginActivity extends AppCompatActivity {
         // 🔹 Sign Up Redirect
         signUpPrompt.setOnClickListener(v -> {
             Log.d(TAG, "Sign Up link clicked.");
-            startActivity(new Intent(ResidentLoginActivity.this, ResidentRegisterActivity.class));
+            startActivity(new Intent(this, ResidentRegisterActivity.class));
         });
 
         // 🔹 Forgot Password Placeholder
@@ -127,5 +128,43 @@ public class ResidentLoginActivity extends AppCompatActivity {
 
         // 🔹 Back Button
         btnBack.setOnClickListener(v -> finish());
+    }
+
+    /**
+     * 🔹 Save or update the FCM token for this resident
+     */
+    private void updateFcmToken(String residentId) {
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Fetching FCM token failed", task.getException());
+                        return;
+                    }
+
+                    String token = task.getResult();
+                    if (token == null || token.isEmpty()) {
+                        Log.w(TAG, "FCM token is null or empty");
+                        return;
+                    }
+
+                    Map<String, Object> updateData = new HashMap<>();
+                    updateData.put("fcmToken", token);
+
+                    db.collection("residents")
+                            .document(residentId)
+                            .update(updateData)
+                            .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ FCM token saved for resident: " + residentId))
+                            .addOnFailureListener(e -> Log.e(TAG, "❌ Failed to save FCM token", e));
+                });
+    }
+
+    /**
+     * 🔹 Redirect to Resident Landing Page
+     */
+    private void goToResidentLandingPage() {
+        Intent intent = new Intent(this, ResidentLandingPageActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 }
