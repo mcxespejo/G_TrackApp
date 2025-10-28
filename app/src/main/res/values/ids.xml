@@ -51,4 +51,6 @@
     <item name="popupContainer" type="id" />
     <item name="notificationContainer" type="id" />
     <item name="txtUsername" type="id" />
+    <item name="btn_verify_username" type="id" />
+    <item name="markerLabelOnly" type="id" />
 </resources>

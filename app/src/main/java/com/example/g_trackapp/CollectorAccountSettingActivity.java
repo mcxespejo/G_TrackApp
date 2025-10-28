@@ -146,16 +146,28 @@ public class CollectorAccountSettingActivity extends AppCompatActivity {
             return;
         }
 
+        // 🔹 Update Firestore document
         db.collection("collectors").document(currentCollectorId)
                 .update(updateData)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Changes saved!", Toast.LENGTH_SHORT).show();
+
+                    // 🔹 Reload the updated info
                     loadCollectorInfo();
-                    toggleEditMode(false);
+
+                    // 🔹 Switch back to view mode
                     isEditing = false;
+                    toggleEditMode(false);
+
+                    // 🔹 Clear password field for security
+                    etPassword.setText("");
                 })
-                .addOnFailureListener(e -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Failed to update collector: ", e);
+                });
     }
+
 
     private void loadCollectorInfo() {
         if (currentCollectorId == null) return;

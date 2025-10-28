@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="2dp">
+
+    <!-- 🗑 Marker icon (truck or bin) -->
+    <ImageView
+        android:id="@+id/markerIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        android:contentDescription="@string/marker_icon_desc" />
+
+    <!-- 🏷 Label container (white rounded background) -->
+    <TextView
+        android:id="@+id/markerLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="3dp"
+        android:background="@drawable/marker_label_bg"
+        android:text="Marker Label"
+        android:textColor="#222222"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:elevation="3dp"
+        android:gravity="center"
+        android:maxLines="1" />
+
+</LinearLayout>

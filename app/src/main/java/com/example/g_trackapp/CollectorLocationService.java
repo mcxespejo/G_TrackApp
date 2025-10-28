@@ -29,6 +29,7 @@ public class CollectorLocationService extends Service {
     private LocationCallback locationCallback;
     private FirebaseFirestore db;
     private CollectorSessionManager sessionManager;
+    private NotificationManager notificationManager;
 
     @Override
     public void onCreate() {
@@ -38,10 +39,11 @@ public class CollectorLocationService extends Service {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         db = FirebaseFirestore.getInstance();
         sessionManager = new CollectorSessionManager(this);
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         createNotificationChannel();
 
-        // ✅ FIRESTORE REAL-TIME VERIFICATION LOG
+        // ✅ Firestore real-time debug log
         db.collection("collectors")
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
@@ -58,11 +60,11 @@ public class CollectorLocationService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent != null ? intent.getAction() : "";
+        String action = (intent != null) ? intent.getAction() : "";
 
         if ("START_LOCATION_UPDATES".equals(action)) {
             Log.d(TAG, "Starting location updates...");
-            startForegroundService();
+            startAsForeground();
             startLocationUpdates();
         } else if ("STOP_LOCATION_UPDATES".equals(action)) {
             Log.d(TAG, "Stopping location updates...");
@@ -71,14 +73,24 @@ public class CollectorLocationService extends Service {
             stopSelf();
         }
 
-        return START_STICKY; // Ensures the service restarts if killed by the system
+        return START_STICKY; // Keeps the service alive if killed
     }
 
-    private void startForegroundService() {
-        Notification notification = buildNotification("Tracking active", "Updating location...");
-        startForeground(NOTIFICATION_ID, notification);
+    /**
+     * Safely start foreground service with persistent notification
+     */
+    private void startAsForeground() {
+        Notification notification = buildNotification("Tracking Active", "Updating location...");
+        try {
+            startForeground(NOTIFICATION_ID, notification);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start foreground service", e);
+        }
     }
 
+    /**
+     * Build notification dynamically
+     */
     private Notification buildNotification(String title, String message) {
         Intent notificationIntent = new Intent(this, CollectorLandingPageActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(
@@ -89,13 +101,16 @@ public class CollectorLocationService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(message)
-                .setSmallIcon(R.drawable.ic_location) // 🔹 Add this icon in res/drawable/
+                .setSmallIcon(R.drawable.ic_location) // ✅ ensure icon exists in res/drawable
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .build();
     }
 
+    /**
+     * Create notification channel (Android O+)
+     */
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
@@ -103,16 +118,19 @@ public class CollectorLocationService extends Service {
                     "Collector Location Tracking",
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Tracks the collector’s location in real-time");
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(channel);
+            channel.setDescription("Tracks the collector’s real-time location");
+            notificationManager.createNotificationChannel(channel);
         }
     }
 
+    /**
+     * Request continuous location updates with safety checks
+     */
     private void startLocationUpdates() {
         LocationRequest locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY, 5000 // every 5 seconds
-        ).setMinUpdateDistanceMeters(10) // update every 10 meters if possible
+        )
+                .setMinUpdateDistanceMeters(10) // update every 10 meters
                 .build();
 
         locationCallback = new LocationCallback() {
@@ -123,14 +141,16 @@ public class CollectorLocationService extends Service {
                         double lat = location.getLatitude();
                         double lon = location.getLongitude();
                         updateCollectorLocation(lat, lon);
-                        Log.d(TAG, "Location updated: " + lat + ", " + lon);
+                        Log.d(TAG, "Updated location: " + lat + ", " + lon);
+
+                        // Optional: update notification dynamically
+                        updateNotification("Tracking Active", "Lat: " + lat + ", Lon: " + lon);
                     }
                 }
             }
         };
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (!hasLocationPermission()) {
             Log.w(TAG, "Location permission not granted — stopping service");
             stopSelf();
             return;
@@ -143,10 +163,20 @@ public class CollectorLocationService extends Service {
         );
     }
 
+    private boolean hasLocationPermission() {
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Firestore: Update collector's location
+     */
     private void updateCollectorLocation(double latitude, double longitude) {
         String collectorId = sessionManager.getCollectorId();
-        if (collectorId == null) {
-            Log.w(TAG, "No collector ID found in session");
+        if (collectorId == null || collectorId.trim().isEmpty()) {
+            Log.w(TAG, "No collector ID found in session — cannot update Firestore");
             return;
         }
 
@@ -156,11 +186,19 @@ public class CollectorLocationService extends Service {
                 .addOnFailureListener(e -> Log.e(TAG, "Error updating Firestore", e));
     }
 
+    /**
+     * Stop updates and clean up
+     */
     private void stopLocationUpdates() {
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
             Log.d(TAG, "Location updates stopped");
         }
+    }
+
+    private void updateNotification(String title, String content) {
+        Notification notification = buildNotification(title, content);
+        notificationManager.notify(NOTIFICATION_ID, notification);
     }
 
     @Override

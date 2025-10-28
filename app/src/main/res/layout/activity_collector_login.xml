@@ -99,13 +99,6 @@
             android:text="Forgot Password?"
             android:textColor="@color/onBackgroundColor" />
 
-        <TextView
-            android:id="@+id/tv_or"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="or"
-            android:textColor="@color/onBackgroundColor" />
 
         <!-- Sign Up Link
         <TextView

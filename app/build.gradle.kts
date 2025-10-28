@@ -84,6 +84,14 @@ dependencies {
     implementation("com.facebook.android:facebook-login:16.3.0")
     implementation("com.google.firebase:firebase-auth:23.0.0")
 
+// existing firebase libs
+    implementation("com.google.firebase:firebase-firestore-ktx:24.6.1")
+// adjust versions as needed
+    implementation("com.google.firebase:firebase-functions-ktx:20.2.0")
+    implementation("com.google.firebase:firebase-messaging:23.2.0")
+// for FCM if used
+    implementation("com.google.firebase:firebase-functions:20.4.0")
+
 } 
 
 secrets {

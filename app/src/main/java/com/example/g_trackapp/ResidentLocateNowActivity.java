@@ -1,16 +1,19 @@
 package com.example.g_trackapp;
 
 import android.Manifest;
-import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
-import android.view.animation.LinearInterpolator;
+import android.view.View;
+import android.view.animation.AlphaAnimation;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -24,6 +27,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -31,7 +35,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,10 +46,16 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
     private ResidentSessionManager sessionManager;
     private FirebaseFirestore db;
+
     private final Map<String, Marker> collectorMarkers = new HashMap<>();
-    private final Map<String, LatLng> lastKnownPositions = new HashMap<>();
+    private final Map<String, Marker> dropOffMarkers = new HashMap<>();
     private ListenerRegistration collectorListener;
+    private ListenerRegistration dropOffListener;
+
     private boolean firstCollectorShown = false;
+    private boolean firstDropOffShown = false;
+
+    private Marker activeLabelMarker = null; // current visible label marker
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,21 +66,17 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
         db = FirebaseFirestore.getInstance();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // ✅ Check and request location permissions
         requestLocationPermission();
 
-        // ✅ Initialize map
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.mapFragment);
+        SupportMapFragment mapFragment =
+                (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.mapFragment);
         if (mapFragment != null) mapFragment.getMapAsync(this);
 
-        // ✅ UI buttons
         findViewById(R.id.btnYourLocation).setOnClickListener(v -> getDeviceLocation());
         findViewById(R.id.btnDropOffLocation).setOnClickListener(v ->
                 Toast.makeText(this, "Drop-off location selected", Toast.LENGTH_SHORT).show()
         );
 
-        // ✅ Menu and navigation buttons
         findViewById(R.id.btnMenu).setOnClickListener(v -> showPopupMenu((ImageView) v));
 
         ImageView btnBackBottom = findViewById(R.id.btnBack);
@@ -104,7 +109,6 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
             );
         }
 
-        // ✅ For Android 13+ push notification permission (optional)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -123,10 +127,17 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
                 == PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(true);
             getDeviceLocation();
-            listenToAllCollectors();
+            listenToCollectors();
+            listenToDropOffLocations();
         } else {
             requestLocationPermission();
         }
+
+        // 👇 Show label bubble when marker tapped
+        mMap.setOnMarkerClickListener(marker -> {
+            showLabelAboveMarker(marker);
+            return true;
+        });
     }
 
     private void getDeviceLocation() {
@@ -144,42 +155,32 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
         }
     }
 
-    /** ✅ Listen to all collectors in real-time */
-    private void listenToAllCollectors() {
+    /** ✅ Listen for collectors (icon only) */
+    private void listenToCollectors() {
         collectorListener = db.collection("collectors").addSnapshotListener((querySnapshot, e) -> {
             if (e != null || querySnapshot == null) return;
 
-            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {  // ✅ Fixed
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                 String id = doc.getId();
                 Double lat = doc.getDouble("latitude");
                 Double lon = doc.getDouble("longitude");
                 String name = doc.getString("firstName");
 
                 if (lat == null || lon == null) continue;
-
                 LatLng newPos = new LatLng(lat, lon);
 
-                // ✅ Skip if collector hasn’t moved
-                if (lastKnownPositions.containsKey(id)) {
-                    LatLng lastPos = lastKnownPositions.get(id);
-                    if (lastPos != null && lastPos.equals(newPos)) continue;
-                }
-                lastKnownPositions.put(id, newPos);
-
                 Marker existingMarker = collectorMarkers.get(id);
-
                 if (existingMarker == null) {
                     MarkerOptions options = new MarkerOptions()
                             .position(newPos)
-                            .title("Collector: " + (name != null ? name : id))
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+                            .title(name != null ? name : "Collector")
+                            .icon(getMarkerIcon(R.drawable.ic_garbage_truck));
 
-                    Marker newMarker = mMap.addMarker(options);
-                    collectorMarkers.put(id, newMarker);
+                    Marker marker = mMap.addMarker(options);
+                    collectorMarkers.put(id, marker);
 
-                    // ✅ Auto zoom on first collector
                     if (!firstCollectorShown) {
-                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newPos, 14f)); // ✅ Explicit float value
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newPos, 14f));
                         firstCollectorShown = true;
                     }
                 } else {
@@ -189,27 +190,124 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
         });
     }
 
-    /** 🚗 Smooth marker animation */
+    /** ✅ Listen for drop-off locations (icon only) */
+    private void listenToDropOffLocations() {
+        dropOffListener = db.collection("dropofflocation").addSnapshotListener((querySnapshot, e) -> {
+            if (e != null || querySnapshot == null) return;
+
+            for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                String id = doc.getId();
+                Double lat = doc.getDouble("latitude");
+                Double lon = doc.getDouble("longitude"); // ✅ FIXED
+                String locationName = doc.getString("location");
+
+                if (lat == null || lon == null) continue;
+                LatLng pos = new LatLng(lat, lon);
+
+                if (!dropOffMarkers.containsKey(id)) {
+                    MarkerOptions options = new MarkerOptions()
+                            .position(pos)
+                            .title(locationName != null ? locationName : "Drop-off")
+                            .icon(getMarkerIcon(R.drawable.ic_garbage_bin));
+
+                    Marker marker = mMap.addMarker(options);
+                    dropOffMarkers.put(id, marker);
+
+                    if (!firstDropOffShown) {
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(pos, 14f));
+                        firstDropOffShown = true;
+                    }
+                }
+            }
+        });
+    }
+
+
+    /** 🎯 Show white rounded label above tapped marker */
+    private void showLabelAboveMarker(Marker marker) {
+        if (mMap == null || marker == null) return;
+
+        if (activeLabelMarker != null) {
+            activeLabelMarker.remove();
+            activeLabelMarker = null;
+        }
+
+        String labelText = marker.getTitle();
+        if (labelText == null || labelText.trim().isEmpty()) return;
+
+        View labelView = getLayoutInflater().inflate(R.layout.custom_marker_label_only, null);
+        TextView label = labelView.findViewById(R.id.markerLabelOnly);
+        if (label == null) return;
+        label.setText(labelText);
+
+        AlphaAnimation fadeIn = new AlphaAnimation(0f, 1f);
+        fadeIn.setDuration(300);
+        labelView.startAnimation(fadeIn);
+
+        Bitmap labelBitmap = createBitmapFromView(labelView);
+        if (labelBitmap == null) return;
+
+        LatLng pos = marker.getPosition();
+        LatLng above = new LatLng(pos.latitude + 0.00025, pos.longitude);
+
+        activeLabelMarker = mMap.addMarker(new MarkerOptions()
+                .position(above)
+                .icon(BitmapDescriptorFactory.fromBitmap(labelBitmap))
+                .anchor(0.5f, 1f)
+                .zIndex(9999f));
+    }
+
+    /** 🧱 Create icon-only marker bitmap */
+    private BitmapDescriptor getMarkerIcon(int iconRes) {
+        View markerView = getLayoutInflater().inflate(R.layout.custom_marker_layout, null);
+        ImageView icon = markerView.findViewById(R.id.markerIcon);
+        icon.setImageResource(iconRes);
+        markerView.findViewById(R.id.markerLabel).setVisibility(View.GONE);
+
+        markerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        markerView.layout(0, 0, markerView.getMeasuredWidth(), markerView.getMeasuredHeight());
+
+        Bitmap bitmap = Bitmap.createBitmap(
+                markerView.getMeasuredWidth(),
+                markerView.getMeasuredHeight(),
+                Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        markerView.draw(canvas);
+        return BitmapDescriptorFactory.fromBitmap(bitmap);
+    }
+
+    /** 🧱 Convert any view to bitmap */
+    private Bitmap createBitmapFromView(View view) {
+        view.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
+        Bitmap bitmap = Bitmap.createBitmap(
+                view.getMeasuredWidth(),
+                view.getMeasuredHeight(),
+                Bitmap.Config.ARGB_8888
+        );
+        Canvas canvas = new Canvas(bitmap);
+        view.draw(canvas);
+        return bitmap;
+    }
+
+    /** 🚗 Animate collector movement smoothly */
     private void animateMarkerSmoothly(Marker marker, LatLng newPosition) {
         if (marker == null || newPosition == null) return;
-
-        final LatLng startPosition = marker.getPosition();
+        final LatLng start = marker.getPosition();
+        final long startTime = System.currentTimeMillis();
         final long duration = 1000;
-        final long start = System.currentTimeMillis();
         Handler handler = new Handler();
 
         handler.post(new Runnable() {
             @Override
             public void run() {
-                long elapsed = System.currentTimeMillis() - start;
+                long elapsed = System.currentTimeMillis() - startTime;
                 float t = Math.min(1, (float) elapsed / duration);
-                double lat = (newPosition.latitude - startPosition.latitude) * t + startPosition.latitude;
-                double lng = (newPosition.longitude - startPosition.longitude) * t + startPosition.longitude;
+                double lat = (newPosition.latitude - start.latitude) * t + start.latitude;
+                double lng = (newPosition.longitude - start.longitude) * t + start.longitude;
                 marker.setPosition(new LatLng(lat, lng));
-
-                if (t < 1.0) {
-                    handler.postDelayed(this, 16);
-                }
+                if (t < 1.0) handler.postDelayed(this, 16);
             }
         });
     }
@@ -217,26 +315,22 @@ public class ResidentLocateNowActivity extends AppCompatActivity implements OnMa
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (collectorListener != null) {
-            collectorListener.remove();
-            collectorListener = null;
-        }
+        if (collectorListener != null) collectorListener.remove();
+        if (dropOffListener != null) dropOffListener.remove();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (mMap != null) {
-                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                            == PackageManager.PERMISSION_GRANTED) {
-                        mMap.setMyLocationEnabled(true);
-                        getDeviceLocation();
-                        listenToAllCollectors();
-                    }
+                if (mMap != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    mMap.setMyLocationEnabled(true);
+                    getDeviceLocation();
+                    listenToCollectors();
+                    listenToDropOffLocations();
                 }
             } else {
                 Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
